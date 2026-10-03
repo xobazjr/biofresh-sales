@@ -5,7 +5,8 @@ const statusLabel = { online: 'ออนไลน์', meeting: 'กำลัง
 const currency = (value) => `฿ ${Number(value || 0).toLocaleString('en-US')}`
 const progress = (sales, target) => target ? Math.min(Math.round((sales / target) * 100), 100) : 0
 
-export default function SalesKpi({ Icon, members, onAddMember, onUpdateMember, onDeleteMember, onAssignTask, onAddDocument }) {
+export default function SalesKpi({ Icon, members: rawMembers = [], onAddMember, onUpdateMember, onDeleteMember, onAssignTask, onAddDocument }) {
+  const members = Array.isArray(rawMembers) ? rawMembers.filter(Boolean) : []
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด')
   const [selectedMember, setSelectedMember] = useState(null)

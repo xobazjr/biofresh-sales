@@ -5,34 +5,43 @@ import { mockCustomers, mockOrders, mockSalesActivities, mockSalesPlans, mockSal
 const STORAGE_KEY = 'biofresh-sales-mock-workspace'
 const CHANNEL_NAME = 'biofresh-sales-mock-workspace'
 const clone = (value) => JSON.parse(JSON.stringify(value))
-const createInitialState = () => ({ customers: clone(mockCustomers), orders: clone(mockOrders), salesPlans: clone(mockSalesPlans), salesActivities: clone(mockSalesActivities), salesTeam: clone(mockSalesTeam) })
+const createInitialState = () => ({ customers: clone(mockCustomers), orders: clone(mockOrders), salesPlans: clone(mockSalesPlans), salesActivities: clone(mockSalesActivities), salesTeam: clone(mockSalesTeam), salesReport: null })
 const isValidState = (value) => Boolean(value && Array.isArray(value.customers) && Array.isArray(value.orders))
+const normalizeState = (value) => ({ ...createInitialState(), ...value, salesPlans: mergeSalesPlans(value?.salesPlans), salesActivities: value?.salesActivities || clone(mockSalesActivities), salesTeam: mergeSalesTeam(value?.salesTeam), salesReport: value?.salesReport || null })
 const mergeSalesPlans = (savedPlans) => {
-  const savedById = new Map((savedPlans || []).map((plan) => [plan.id, plan]))
+  const validPlans = (Array.isArray(savedPlans) ? savedPlans : []).filter(Boolean)
+  const savedById = new Map(validPlans.map((plan) => [plan.id, plan]))
   const seeded = mockSalesPlans.map((plan) => ({ ...clone(plan), ...(savedById.get(plan.id) || {}) }))
-  const newPlans = (savedPlans || []).filter((plan) => !mockSalesPlans.some((seed) => seed.id === plan.id))
+  const newPlans = validPlans.filter((plan) => !mockSalesPlans.some((seed) => seed.id === plan.id))
   return [...seeded, ...clone(newPlans)]
 }
 const mergeSalesTeam = (savedTeam) => {
-  const savedById = new Map((savedTeam || []).map((member) => [member.id, member]))
+  const validMembers = (Array.isArray(savedTeam) ? savedTeam : []).filter(Boolean)
+  const savedById = new Map(validMembers.map((member) => [member.id, member]))
   const seeded = mockSalesTeam.map((member) => ({ ...clone(member), ...(savedById.get(member.id) || {}) }))
-  const newMembers = (savedTeam || []).filter((member) => !mockSalesTeam.some((seed) => seed.id === member.id))
+  const newMembers = validMembers.filter((member) => !mockSalesTeam.some((seed) => seed.id === member.id))
   return [...seeded, ...clone(newMembers)]
 }
 
 let state = createInitialState()
+let hydrated = false
 const listeners = new Set()
 const channel = typeof window !== 'undefined' && 'BroadcastChannel' in window ? new BroadcastChannel(CHANNEL_NAME) : null
 
-if (typeof window !== 'undefined') {
+const notify = () => listeners.forEach((listener) => listener())
+const hydrate = () => {
+  if (hydrated || typeof window === 'undefined') return
+  hydrated = true
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY)
     const parsed = saved ? JSON.parse(saved) : null
-    if (isValidState(parsed)) state = { ...createInitialState(), ...parsed, salesPlans: mergeSalesPlans(parsed.salesPlans), salesActivities: parsed.salesActivities || clone(mockSalesActivities), salesTeam: mergeSalesTeam(parsed.salesTeam) }
+    if (isValidState(parsed)) {
+      state = normalizeState(parsed)
+      notify()
+    }
   } catch { /* memory-only fallback */ }
 }
 
-const notify = () => listeners.forEach((listener) => listener())
 const commit = (nextState, shouldBroadcast = true) => {
   state = nextState
   if (typeof window !== 'undefined') {
@@ -43,7 +52,7 @@ const commit = (nextState, shouldBroadcast = true) => {
 }
 
 channel?.addEventListener('message', (event) => {
-  if (isValidState(event.data)) commit(clone(event.data), false)
+  if (isValidState(event.data)) commit(normalizeState(clone(event.data)), false)
 })
 
 if (typeof window !== 'undefined') {
@@ -51,7 +60,7 @@ if (typeof window !== 'undefined') {
     if (event.key !== STORAGE_KEY || !event.newValue) return
     try {
       const next = JSON.parse(event.newValue)
-      if (isValidState(next)) commit(next, false)
+      if (isValidState(next)) commit(normalizeState(next), false)
     } catch { /* ignore malformed temporary storage */ }
   })
 }
@@ -64,6 +73,7 @@ const validStatuses = new Set(['planning', 'production', 'ready', 'shipped'])
 export const mockWorkspace = {
   getSnapshot: () => state,
   subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
+  hydrate,
   reset: () => commit(createInitialState()),
   addCustomer: (customer) => {
     const id = `cus_${Date.now()}`
@@ -132,6 +142,9 @@ export const mockWorkspace = {
   },
   addSalesDocument: (id, document) => {
     commit({ ...state, salesTeam: state.salesTeam.map((item) => item.id === id ? { ...item, documents: [...(item.documents || []), { id: `doc_${Date.now()}`, ...document }] } : item) })
+  },
+  setSalesReport: (report) => {
+    commit({ ...state, salesReport: report || null })
   },
 }
 
