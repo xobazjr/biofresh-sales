@@ -870,6 +870,57 @@ A feature is considered complete only when:
 
 ⸻
 
+Theme & Accessibility
+
+The application should support both Light mode and Dark mode.
+
+* Theme selection must be available from the workspace UI.
+* The selected theme should persist for the user across reloads.
+* Use shared CSS variables/tokens for theme-dependent colors instead of duplicating page-specific theme logic.
+* Theme changes must cover all shared surfaces, including navigation, cards, tables, forms, modals, status indicators, dashboards, and empty/error states.
+* Maintain readable contrast and visible focus/hover states in both themes.
+* Do not encode business logic or data assumptions into theme styles.
+
+⸻
+
+Sales Tracker Requirements
+
+Sales Tracker represents sales activities and daily plans, not only a pipeline list.
+
+Each activity should support, when available:
+
+* Activity title and controlled activity type: customer visit, follow-up, internal meeting, sample delivery, or other
+* Activity date, start time, end time, and location
+* Main owner and participants
+* Customer association, with a controlled flow for creating a new customer
+* After-sale information, including expected monthly revenue and products of interest
+* Description, purpose, next action, follow-up date, and notes
+* Supporting documents and visit images
+
+The workspace should support Daily Plan and monthly views, filtering by owner and activity type, viewing activity details, creating activities, editing activities, and updating activity stage.
+
+Attachments are temporary/mock data until storage is implemented. The future database model should keep customer and user information normalized through IDs rather than duplicating profile data in activities.
+
+⸻
+
+Sales KPI Requirements
+
+Sale KPI is the team-performance workspace for sales staff. It should provide:
+
+* Annual sales total and annual target total
+* Current-month sales total
+* Total team activities and follow-up work
+* Search by salesperson name, phone number, or assigned area
+* Status filters for all, online, visiting a customer, and leave
+* A per-person view with contact details, monthly sales, monthly target, target attainment, follow-up work, latest activity, assigned tasks, completed activities, closed deals, and new customers
+* Create, edit, and delete salesperson records
+* Assign tasks with due dates to a salesperson
+* Attach documents to a salesperson record
+
+Until a real database is introduced, Sale KPI uses the shared mock workspace repository so changes are reflected across open views and browser tabs. Salesperson records must use stable IDs and should be migrated to normalized users/sales_staff, tasks, activities, and documents tables when the database is implemented. File attachments are mock metadata only until object storage is available.
+
+⸻
+
 Important Principle
 
 This is a business application.

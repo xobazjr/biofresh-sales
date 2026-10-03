@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
 
-# Vite build output
+# Next.js build output
+\.next/
 dist/
 
 # Local environment files
